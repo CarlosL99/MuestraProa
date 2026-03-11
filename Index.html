@@ -1,667 +1,1082 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ProA T' MUESTRA 2025</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capítulo 2 – Pruebas y Depuración</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1207;
+    --paper: #f5f0e8;
+    --parchment: #ede5d0;
+    --accent: #8b3a0f;
+    --accent2: #2c5f2e;
+    --gold: #c9952a;
+    --red-warn: #c0392b;
+    --border: #c4b49a;
+    --shadow: rgba(26,18,7,0.15);
+  }
 
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #000;
-            font-family: 'Arial', sans-serif;
-        }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* Contenedor rotado */
-        .svg-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            width: 100vh;
-            height: 100vw;
-            transform: translate(-50%, -50%) rotate(90deg);
-            transform-origin: center;
-        }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 300;
+    line-height: 1.85;
+    min-height: 100vh;
+  }
 
-        /* === OSCURECER IMAGEN DE FONDO === */
-        svg image {
-            filter: brightness(0.65) contrast(1.1);
-            transition: filter 0.4s ease;
-        }
+  /* OVERLAY BLOQUEO */
+  #blocked-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #0d0905;
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 24px;
+    text-align: center;
+    padding: 40px;
+  }
+  #blocked-overlay.active { display: flex; }
+  #blocked-overlay h1 {
+    font-family: 'Playfair Display', serif;
+    color: var(--red-warn);
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    letter-spacing: .04em;
+  }
+  #blocked-overlay p { color: #888; font-size: 1.1rem; max-width: 500px; line-height: 1.7; }
 
-        svg {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+  /* OVERLAY ADVERTENCIA */
+  #warn-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,6,2,.92);
+    z-index: 8888;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(6px);
+  }
+  #warn-overlay.active { display: flex; }
+  #warn-overlay .warn-box {
+    background: #1c1309;
+    border: 2px solid var(--red-warn);
+    border-radius: 12px;
+    padding: 48px 56px;
+    text-align: center;
+    max-width: 560px;
+    width: 90%;
+  }
+  #warn-overlay h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--red-warn);
+    font-size: 1.9rem;
+    margin-bottom: 16px;
+    display: block;
+    border: none;
+    padding: 0;
+  }
+  #warn-overlay p { color: #ccc; line-height: 1.7; margin-bottom: 8px; font-size: 1rem; }
+  #warn-overlay .attempts-left { color: var(--gold); font-weight: 600; font-size: 1.05rem; }
+  #warn-overlay button {
+    margin-top: 24px;
+    background: var(--red-warn);
+    color: #fff;
+    border: none;
+    padding: 14px 40px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: .05em;
+    transition: background .2s;
+  }
+  #warn-overlay button:hover { background: #a93226; }
 
-        image {
-            width: 100%;
-            height: 100%;
-        }
+  /* HEADER */
+  .site-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 48px 40px 36px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .site-header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(201,149,42,.04) 40px, rgba(201,149,42,.04) 80px);
+  }
+  .site-header .chapter-label {
+    font-size: .8rem;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .site-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    font-weight: 900;
+    line-height: 1.1;
+    position: relative;
+  }
+  .site-header .subtitle {
+    color: #a89880;
+    margin-top: 10px;
+    font-style: italic;
+    font-size: 1.05rem;
+    position: relative;
+  }
 
-        /* === ESTILOS INTERACTIVOS === */
-        .interactive-circle,
-        .interactive-rect {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+  /* STATUS BAR */
+  .status-bar {
+    background: var(--parchment);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .85rem;
+    color: #7a6a55;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .status-bar .alert-count { color: var(--red-warn); font-weight: 600; }
+  .status-bar .phase-indicator {
+    background: var(--ink);
+    color: var(--gold);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: .78rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  #fs-btn {
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    padding: 6px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: .82rem;
+    font-family: inherit;
+    transition: background .2s;
+  }
+  #fs-btn:hover { background: #204821; }
 
-        .interactive-circle:hover circle,
-        .interactive-rect:hover rect {
-            stroke-width: 5;
-            filter: brightness(1.3);
-        }
+  /* CONTAINER */
+  .container { max-width: 900px; margin: 0 auto; padding: 56px 40px 80px; }
 
-        .interactive-circle:hover circle {
-            r: 20;
-        }
+  /* THEORY */
+  .theory-block { margin-bottom: 52px; }
+  .section-number {
+    display: inline-block;
+    width: 36px; height: 36px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 36px;
+    font-size: .85rem;
+    font-weight: 700;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: var(--accent);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.12rem;
+    color: var(--ink);
+    margin: 24px 0 10px;
+    position: relative;
+    padding-left: 16px;
+  }
+  h3::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 4px; bottom: 4px;
+    width: 3px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+  p { margin-bottom: 14px; }
+  ul { margin: 10px 0 18px 24px; list-style: none; }
+  ul li { position: relative; padding-left: 20px; margin-bottom: 8px; }
+  ul li::before { content: '—'; position: absolute; left: 0; color: var(--gold); }
+  ol.numbered { margin: 12px 0 18px 32px; }
+  ol.numbered li { margin-bottom: 8px; }
+  .highlight-box {
+    background: var(--parchment);
+    border-left: 4px solid var(--accent);
+    padding: 18px 22px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+  }
+  .highlight-box strong { color: var(--accent); font-style: normal; }
+  .definition-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 20px 0; }
+  @media(max-width:600px){ .definition-grid { grid-template-columns: 1fr; } }
+  .def-card { background: var(--parchment); border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; }
+  .def-card .def-title { font-family: 'Playfair Display', serif; color: var(--accent); font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+  .def-card p { font-size: .9rem; margin: 0; }
+  .divider { text-align: center; margin: 60px 0 48px; position: relative; }
+  .divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+  .divider span { background: var(--paper); padding: 0 20px; position: relative; font-family: 'Playfair Display', serif; color: var(--gold); font-size: 1.2rem; letter-spacing: .3em; }
 
-        /* === MODAL HERMOSO === */
-        /* === MODAL ROTADO 90° (COMPLETO) === */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.4s ease;
-            z-index: 9999;
-        }
+  /* SCROLL HINT */
+  .scroll-hint { text-align: center; padding: 40px 0 0; color: #9a8a75; font-style: italic; font-size: .95rem; }
+  .scroll-hint .arrow { display: block; font-size: 1.6rem; animation: bounce 1.5s infinite; color: var(--gold); font-style: normal; margin-top: 8px; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
 
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
+  /* QUESTIONS SECTION */
+  #questions-section { display: none; }
 
-        .modal-content {
-            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-            color: white;
-            padding: 40px 20px;
-            border-radius: 16px;
-            width: 480px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-            border: 3px solid #27ae60;
-            border-left: 8px solid #27ae60;
+  .theory-toggle-bar {
+    background: var(--parchment);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 22px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .theory-toggle-bar span { font-size: .9rem; color: #7a6a55; }
+  #toggle-theory-btn {
+    background: var(--ink);
+    color: var(--gold);
+    border: none;
+    padding: 8px 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Playfair Display', serif;
+    font-size: .88rem;
+    letter-spacing: .04em;
+    transition: background .2s;
+  }
+  #toggle-theory-btn:hover { background: #3a2a15; }
 
-            /* ROTACIÓN COMPLETA 90° */
-            transform: rotate(90deg) scale(0.3);
-            transform-origin: center;
-            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            opacity: 0;
-        }
+  #inline-theory {
+    display: none;
+    background: var(--parchment);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 36px;
+    margin-bottom: 32px;
+  }
+  #inline-theory.open { display: block; }
 
-        .modal-overlay.active .modal-content {
-            transform: rotate(90deg) scale(1);
-            opacity: 1;
-        }
+  .q-header {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 12px;
+    padding: 32px 36px;
+    margin-bottom: 36px;
+    text-align: center;
+  }
+  .q-header h2 { color: var(--gold); border: none; font-size: 2rem; display: block; padding: 0; margin: 0 0 8px; }
+  .q-header p { color: #a89880; font-size: .95rem; margin: 0; }
 
-        .modal-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #27ae60;
-            margin-bottom: 16px;
-            letter-spacing: 1px;
-        }
+  .question-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 36px;
+    box-shadow: 0 4px 20px var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 6px; height: 100%;
+    background: linear-gradient(to bottom, var(--accent), var(--gold));
+  }
 
-        .modal-body {
-            font-size: 17px;
-            line-height: 1.8;
-            color: #eee;
-        }
+  .q-number { font-family: 'Playfair Display', serif; font-size: 3.5rem; color: var(--parchment); position: absolute; top: 12px; right: 24px; line-height: 1; user-select: none; }
+  .q-label { font-size: .75rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+  .q-text { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; line-height: 1.5; padding-right: 60px; }
 
-        .modal-body strong {
-            color: #27ae60;
-            font-size: 18px;
-        }
+  .q-textarea {
+    width: 100%;
+    min-height: 160px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Source Serif 4', serif;
+    font-size: .97rem;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--paper);
+    resize: vertical;
+    transition: border-color .2s;
+    outline: none;
+  }
+  .q-textarea:focus { border-color: var(--accent); }
 
-        .modal-close {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #aaa;
-            font-size: 32px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
+  .char-info { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: .82rem; color: #9a8a75; }
+  .char-count { font-weight: 600; }
+  .char-count.ok { color: var(--accent2); }
+  .char-count.short { color: var(--red-warn); }
 
-        .modal-close:hover {
-            background: #27ae60;
-            color: white;
-            transform: scale(1.1);
-        }
+  .q-progress { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+  .q-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border); transition: background .3s; }
+  .q-dot.done { background: var(--accent2); }
+  .q-dot.current { background: var(--accent); transform: scale(1.3); }
 
-        /* Responsive: en móvil se ve mejor */
-        @media (max-width: 768px) {
-            .modal-content {
-                width: 420px;
-                padding: 30px 18px;
-            }
-        }
+  .btn-next {
+    margin-top: 20px;
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    letter-spacing: .06em;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  .btn-next:disabled { background: #c4b49a; cursor: not-allowed; }
+  .btn-next:not(:disabled):hover { background: #6e2d0a; transform: translateY(-1px); }
 
-
-        /* LOGO INICIO  */
-        /* === ANIMACIÓN DE BIENVENIDA === */
-        .welcome-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.92);
-            backdrop-filter: blur(8px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 99999;
-            animation: fadeOut 4s ease-out forwards;
-            pointer-events: none;
-        }
-
-        .welcome-text {
-            text-align: center;
-            color: white;
-            animation: slideUp 1.2s ease-out;
-        }
-
-        .welcome-text h1 {
-            font-size: 48px;
-            font-weight: 800;
-            margin: 0;
-            letter-spacing: 3px;
-            color: #27ae60;
-            text-shadow: 0 0 20px rgba(39, 174, 96, 0.6);
-        }
-
-        .welcome-text h2 {
-            font-size: 32px;
-            font-weight: 600;
-            margin: 12px 0 0;
-            letter-spacing: 2px;
-            color: #fff;
-            opacity: 0.9;
-        }
-
-        /* Animaciones */
-        @keyframes slideUp {
-            0% {
-                transform: translateY(60px);
-                opacity: 0;
-            }
-
-            60% {
-                transform: translateY(0);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeOut {
-
-            0%,
-            70% {
-                opacity: 1;
-                visibility: visible;
-            }
-
-            100% {
-                opacity: 0;
-                visibility: hidden;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .welcome-text h1 {
-                font-size: 36px;
-            }
-
-            .welcome-text h2 {
-                font-size: 24px;
-            }
-        }
-
-        /* 
-        Animacion del click osea la flechita q hagan click ! */
-
-        /* === INSTRUCCIÓN GIRADA +90° (LADO DERECHO) === */
-        .click-hint {
-            position: fixed;
-            bottom: 40%;
-            right: 20px;
-            /* ← LADO DERECHO */
-            transform: translateY(50%) rotate(90deg);
-            /* ← GIRO +90° */
-            transform-origin: center right;
-            background: rgba(39, 174, 96, 0.2);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(39, 174, 96, 0.5);
-            border-radius: 16px;
-            padding: 14px 20px;
-            font-family: 'Arial', sans-serif;
-            color: white;
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 9998;
-            opacity: 0;
-            pointer-events: none;
-            white-space: nowrap;
-
-            /* Entrada suave después de la bienvenida */
-            animation: hintFadeIn 0.7s ease-out 4.5s forwards;
-        }
-
-        .click-hint.show {
-            opacity: 1;
-        }
-
-        /* === CONTENIDO (contrarrotado para legibilidad) === */
-        .hint-content {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transform: rotate(-90deg);
-            /* ← Contrarresta el giro */
-            transform-origin: center;
-        }
-
-        /* === ANIMACIONES === */
-        .exclamation {
-            color: #27ae60;
-            font-size: 22px;
-            font-weight: bold;
-            display: inline-block;
-            animation: pulseExclamation 2s ease-in-out infinite;
-        }
-
-        .hint-arrow {
-            font-size: 20px;
-            animation: bounceArrow 2s ease-in-out infinite;
-        }
-
-        /* Animaciones */
-        @keyframes hintFadeIn {
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes pulseExclamation {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.3);
-                color: #4ade80;
-            }
-        }
-
-        @keyframes bounceArrow {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            50% {
-                transform: translateX(6px);
-            }
-
-            /* ← Rebota hacia afuera (derecha) */
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .click-hint {
-                right: 16px;
-                font-size: 14px;
-                padding: 12px 16px;
-            }
-
-            .exclamation {
-                font-size: 25px;
-            }
-
-            .hint-arrow {
-                font-size: 18px;
-            }
-        }
-    </style>
+  /* COMPLETED */
+  #completed-section { display: none; text-align: center; padding: 60px 40px; }
+  #completed-section h2 { font-family: 'Playfair Display', serif; font-size: 2.4rem; color: var(--accent2); border: none; padding: 0; display: block; margin-bottom: 12px; }
+  #completed-section p { color: #7a6a55; margin-bottom: 30px; }
+  .btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--ink);
+    color: var(--gold);
+    border: 2px solid var(--gold);
+    padding: 16px 44px;
+    border-radius: 8px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    cursor: pointer;
+    letter-spacing: .06em;
+    transition: all .2s;
+  }
+  .btn-download:hover { background: var(--gold); color: var(--ink); }
+</style>
 </head>
-
 <body>
 
-    <div class="svg-container">
-        <svg id="mapa-svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice"
-            xmlns="http://www.w3.org/2000/svg">
+<!-- OVERLAY BLOQUEO -->
+<div id="blocked-overlay">
+  <h1>Acceso Bloqueado</h1>
+  <p>Has superado el número máximo de advertencias permitidas. El acceso a este examen ha sido revocado permanentemente en este dispositivo.</p>
+</div>
 
-            <!-- IMAGEN DE FONDO -->
-            <image href="Mapa Muestra Anual proA.png" width="1080" height="1920" />
+<!-- OVERLAY ADVERTENCIA -->
+<div id="warn-overlay">
+  <div class="warn-box">
+    <h2>Atención</h2>
+    <p id="warn-msg"></p>
+    <p>El cuestionario ha sido reiniciado desde la primera pregunta.</p>
+    <p class="attempts-left" id="attempts-left-text"></p>
+    <button id="resume-btn">Entendido — Continuar</button>
+  </div>
+</div>
 
-            <!-- === CÍRCULOS INTERACTIVOS CON LETRAS === -->
-            <!-- Ajusta las coordenadas (x, y) según tu imagen -->
-            <g class="interactive-circle" data-info="PASANTÍAS 2025 - FTV. 6° año">
-                <circle cx="212" cy="1117" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="212" y="1117" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
+<!-- HEADER -->
+<header class="site-header">
+  <div class="chapter-label">Capítulo 2</div>
+  <h1>Pruebas y Depuración</h1>
+  <div class="subtitle">Fundamentos de Prueba de Software</div>
+</header>
 
-            <!-- Ejemplo de uno más -->
-            <g class="interactive-circle"
-                data-info="VIAJE EN LA NATURALEZA, UNQUILLO - Educación física y Club de deportes. 6° año">
-                <circle cx="730" cy="856" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="730" y="856" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <span id="phase-text" class="phase-indicator">Leyendo teoría</span>
+  <span>Alertas: <span class="alert-count" id="alert-count">0</span> / 3</span>
+  <button id="fs-btn" onclick="requestFS()">Pantalla completa</button>
+</div>
 
-            <g class="interactive-circle" data-info="ARTE SANO - Artes visuales. 1° año">
-                <circle cx="289" cy="1169" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="289" y="1169" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
+<div class="container">
 
-            <g class="interactive-circle" data-info="PODCAST: MITOS Y LEYENDAS - Lengua y literatura. 2° año">
-                <circle cx="291" cy="926" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="291" y="926" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-            <g class="interactive-circle" data-info="METAMAGIA - Matemática. 1° año">
-                <circle cx="394" cy="927" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="394" y="927" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-            <g class="interactive-circle"
-                data-info="PITÁGORAS EN TRÁNSITO: ÁNGULOS, TRIÁNGULOS Y REALIDAD - Matemática. 4° año">
-                <circle cx="480" cy="985" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="480" y="985" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
+  <!-- ══════════════════════════════════════════
+       TEORÍA COMPLETA
+  ══════════════════════════════════════════ -->
+  <div id="theory-section">
 
-            <g class="interactive-circle" data-info="ESPIANDO NUESTRO SUELO - Química. 6° año">
-                <circle cx="557" cy="977" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="557" y="977" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-circle" data-info="PRIMEROS AUXILIOS - Física. 3° año">
-                <circle cx="603" cy="939" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="603" y="939" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-circle" data-info="ROBOT - Programación. 2° año">
-                <circle cx="522" cy="1113" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="522" y="1113" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-circle"
-                data-info="VOLVER A MALVINAS - Ciudadanía y participación, Psicología y Ética. 5° año">
-                <circle cx="773" cy="1168" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="773" y="1168" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-circle" data-info="CONOCEMOS LA EDUCACIÓN FÍSICA - Educación física. 1° año">
-                <circle cx="870" cy="940" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="870" y="940" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-            <g class="interactive-circle" data-info="GREATES MINDS - Inglés. 5° y 2° año">
-                <circle cx="875" cy="983" r="16" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <text x="875" y="983" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-
-
-
-            <g class="interactive-rect" data-info="INTELIGENCIA ARTIFICIAL - Tecnología. 3° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="237" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="260" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-
-            <g class="interactive-rect"
-                data-info="SOCIEDAD DE NACIONES UNIDAS Y ANTECEDENTES DE LA ONU - Historia. 4° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="332" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="356" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="EMOCIONES BAJO LA LUPA - Teatro. 4° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="409" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="433" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="FERIA DE CIENCIAS - Música. 3° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="460" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="483" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="LA IGUALDAD NO TIENE GÉNERO - Ciudadanía y participación. 2° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="724" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="747" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-            <g class="interactive-rect" data-info="DONACIÓN DE ÓRGANOS - FVT. 4° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="772" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="795" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-            <g class="interactive-rect" data-info="MODELO ONU - Geografía, Historia y Ética. 5° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="820" y="1063" width="45" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="843" y="1077" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-            <!-- 
-Otro lado -->
-            <g class="interactive-rect" data-info="LET'S SING - Inglés. 3° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="285" y="1016" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="305" y="1029" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-
-            <g class="interactive-rect" data-info="BIOLOGÍA DE LA VIDA - Biología. 2° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="330" y="1016" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="350" y="1029" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-
-            <g class="interactive-rect" data-info="MARATÓN DE LECTURA ANTAGONISTA - Lengua y literatura. 1° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="374" y="1016" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="394" y="1029" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="JUGANDO CON SCRATCH - Sistemas operativos. 1° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="418" y="1016" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="438" y="1029" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-
-            <g class="interactive-rect" data-info="JUGANDO CON SCRATCH - Sistemas operativos. 1° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="540" y="1016" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="560" y="1029" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="Proyecto APP móvil - Programación. 4° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="840" y="1016" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="860" y="1029" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="CLOWN EN LA ESCUELA - Club de arte Teatro. 5° año">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="746" y="966" width="40" height="25" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="766" y="979" fill="white" font-weight="bold" font-size="25" text-anchor="middle"
-                    dominant-baseline="central">!</text>
-            </g>
-
-            <g class="interactive-rect" data-info="FOTOS">
-                <!-- Rectángulo verde pequeño (mismo tamaño que círculo: ~32x32) -->
-                <rect x="620" y="968" width="25" height="50" rx="6" fill="#27ae60" stroke="#1a6b3a" stroke-width="3" />
-                <!-- Texto centrado -->
-                <text x="630" y="994" fill="white" font-weight="bold" font-size="15" text-anchor="middle"
-                    dominant-baseline="central" style="writing-mode: vertical-rl; text-orientation: mixed;">Fotos</text>
-            </g>
-
-        </svg>
+    <div class="theory-block">
+      <h2><span class="section-number">1</span>¿Para qué sirven las pruebas de Software? Fundamentos de Prueba</h2>
+      <p>Las pruebas de software tienen nueve objetivos generales, que ayudan a garantizar la calidad del sistema. A continuación, veremos algunos de ellos en detalle.</p>
     </div>
-    <!-- MODAL -->
-    <div id="modal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title" id="modal-title">Título</div>
-                <button class="modal-close" id="modal-close">×</button>
-            </div>
-            <div class="modal-body" id="modal-body">
-                Contenido del proyecto...
-            </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">2</span>Evaluar los Productos de Trabajo</h2>
+      <p>Durante el ciclo de vida del desarrollo de software, se generan varios productos de trabajo (Work Products), como:</p>
+      <ul>
+        <li>Grabaciones de reuniones</li>
+        <li>Informes de riesgos</li>
+        <li>Documentos de requerimientos</li>
+        <li>Reportes de progreso</li>
+        <li>Diagramas de diseño</li>
+        <li>Código fuente</li>
+        <li>El sistema terminado</li>
+      </ul>
+      <p>Es importante revisar estos productos desde las etapas más tempranas para detectar errores a tiempo. Esto evita que los problemas avancen a fases donde su corrección sería más difícil y costosa, un principio conocido como <strong>Contención de Fase</strong>.</p>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">3</span>Verificar que se cumplan los requerimientos</h2>
+      <p>Las pruebas de software permiten verificar que el sistema cumple con todos los requerimientos especificados, incluyendo los de:</p>
+      <ul>
+        <li><strong>Negocio:</strong> Por ejemplo, el cálculo de intereses en una tarjeta de crédito.</li>
+        <li><strong>Legales:</strong> Como el cumplimiento de regulaciones bancarias.</li>
+      </ul>
+      <p>Un sistema debe cumplir con las reglas establecidas tanto por la empresa como por la ley.</p>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">4</span>Validar que el software funcione como se espera</h2>
+      <p>Además de verificar que el software cumple con los requisitos, se debe validar que realmente satisfaga las necesidades de los usuarios.</p>
+      <div class="highlight-box">
+        <strong>Pregunta clave:</strong> ¿El software realmente resuelve el problema que motivó su desarrollo?
+      </div>
+      <p>Si un sistema pasa las pruebas de verificación y validación, podemos generar confianza en su calidad.</p>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">5</span>Generar confianza en el software</h2>
+      <p>Un software confiable es fundamental para que los usuarios lo acepten y lo usen.</p>
+      <p><strong>Ejemplos de falta de confianza:</strong></p>
+      <ul>
+        <li>Un banco donde la tarjeta de débito falla constantemente.</li>
+        <li>Un servicio de TV por cable que se interrumpe cuando hay nubes.</li>
+        <li>Un automóvil que se descompone con frecuencia.</li>
+      </ul>
+      <p>La confianza es clave para el éxito de un producto. Por ejemplo, un iPhone puede costar un 40% más que un Huawei, pero la confianza en la marca (y el marketing) hace que la gente esté dispuesta a pagar más.</p>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">6</span>Prevenir defectos</h2>
+      <p>Las pruebas no solo buscan encontrar errores, sino también evitarlos antes de que ocurran.</p>
+      <p>Pero, ¿realmente se pueden prevenir los defectos?</p>
+      <ul>
+        <li>Un defecto es la consecuencia de un error cometido por una persona.</li>
+        <li>Un defecto puede generar otros defectos en el software.</li>
+        <li>Al corregir un defecto temprano, se puede evitar la aparición de nuevos problemas en el sistema.</li>
+      </ul>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">7</span>Diferencia entre Error, Falla y Defecto</h2>
+      <p>Es común confundir estos términos, pero no significan lo mismo:</p>
+      <div class="definition-grid">
+        <div class="def-card">
+          <div class="def-title">Error</div>
+          <p>Es una equivocación cometida por un desarrollador en el código.</p>
         </div>
-    </div>
-
-
-    <script>
-        // === ELEMENTOS DEL MODAL ===
-        const modal = document.getElementById('modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalBody = document.getElementById('modal-body');
-        const modalClose = document.getElementById('modal-close');
-        const svg = document.getElementById('mapa-svg');
-
-        // === ABRIR MODAL ===
-        function openModal(title, content) {
-            modalTitle.textContent = title;
-            modalBody.innerHTML = `<br>${content.split(' - ')[1] || ''}`;
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // === CERRAR MODAL ===
-        function closeModal() {
-            modal.classList.remove('active');
-            setTimeout(() => {
-                document.body.style.overflow = '';
-            }, 400);
-        }
-
-        modalClose.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-
-        // === CLIC EN PUNTOS INTERACTIVOS ===
-        svg.addEventListener('click', function (e) {
-            const target = e.target.closest('.interactive-circle, .interactive-rect');
-            if (!target) return;
-
-            const info = target.getAttribute('data-info');
-            if (info) {
-                const [title, ...rest] = info.split(' - ');
-                openModal(title, info);
-            }
-        });
-
-        // === HOVER EN CÍRCULOS ===
-        document.querySelectorAll('.interactive-circle').forEach(g => {
-            const circle = g.querySelector('circle');
-            g.addEventListener('mouseenter', () => circle.setAttribute('r', '20'));
-            g.addEventListener('mouseleave', () => circle.setAttribute('r', '16'));
-        });
-
-        // === TECLA ESC CIERRA MODAL ===
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal.classList.contains('active')) {
-                closeModal();
-            }
-        });
-    </script>
-
-
-    <!-- ANIMACIÓN DE BIENVENIDA -->
-    <div class="welcome-screen">
-        <div class="welcome-text">
-            <h1>ProA T' MUESTRA 2025</h1>
-            <h2>EXPO ANUAL</h2>
+        <div class="def-card">
+          <div class="def-title">Defecto</div>
+          <p>Es el resultado de un error en el software.</p>
         </div>
+        <div class="def-card">
+          <div class="def-title">Falla</div>
+          <p>Es cuando un defecto llega a producción y afecta a los usuarios.</p>
+        </div>
+      </div>
+      <div class="highlight-box">
+        <strong>Ejemplo:</strong> Un programador olvida agregar una validación en un formulario (error), lo que provoca que se puedan ingresar datos incorrectos (defecto). Si este problema no se detecta y los clientes empiezan a usarlo, generando problemas en la empresa, estamos ante una falla.
+      </div>
+      <h3>Relación entre Error, Defecto y Falla</h3>
+      <p>Un humano comete un error que introduce un defecto en el código. Si el código defectuoso se ejecuta en producción, podría generar una falla.</p>
+      <p><strong>Ejemplo práctico:</strong></p>
+      <ol class="numbered">
+        <li>Un desarrollador olvida validar una división por cero (error).</li>
+        <li>En el código, no hay ninguna verificación para evitar dividir entre cero (defecto).</li>
+        <li>Si un usuario ingresa un valor que genera una división por cero, el sistema falla (falla).</li>
+      </ol>
+      <p>No todos los defectos generan fallas de inmediato, ya que depende de cómo se use el software.</p>
     </div>
 
-    <!-- INSTRUCCIÓN: HAZ CLIC EN LOS ! -->
-    <div class="click-hint">
-        <div class="hint-text">¡Haz clic en los <span class="exclamation">!</span></div>
-        <div class="hint-arrow">↓</div>
+    <div class="theory-block">
+      <h2><span class="section-number">8</span>Reducir el Riesgo de Fallas</h2>
+      <p>Al encontrar y corregir defectos antes de que el software se libere, se reduce el riesgo de fallas en producción.</p>
+      <div class="highlight-box">
+        <strong>Ejemplo:</strong> Si las pruebas revelan muchas fallas, la empresa podría decidir retrasar la salida a producción hasta que los problemas sean corregidos.
+      </div>
+      <p>También se pueden evaluar riesgos:</p>
+      <ul>
+        <li>Si un sistema ha pasado el 80% de las pruebas, se evalúa si el 20% restante es crítico o si se puede omitir.</li>
+      </ul>
+      <p>Es imposible eliminar todos los defectos, pero el objetivo es minimizar el riesgo.</p>
     </div>
 
+    <div class="theory-block">
+      <h2><span class="section-number">9</span>Proporcionar Información para la Toma de Decisiones</h2>
+      <p>Las pruebas generan información clave para los responsables del proyecto. Con base en los resultados de las pruebas, pueden decidir si:</p>
+      <ul>
+        <li>Retrasar la liberación del producto.</li>
+        <li>Asumir ciertos riesgos.</li>
+        <li>Invertir más tiempo en correcciones.</li>
+      </ul>
+      <div class="highlight-box">
+        <strong>Ejemplo:</strong> Si se han detectado muchas fallas críticas en un software bancario, es mejor retrasar su lanzamiento hasta corregirlas, en lugar de arriesgar pérdidas millonarias.
+      </div>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">10</span>Cumplir con Requisitos Legales y Estándares</h2>
+      <p>Algunos sistemas deben cumplir regulaciones específicas, por ejemplo:</p>
+      <ul>
+        <li><strong>Sistemas bancarios</strong> → Regulados por el Banco Central.</li>
+        <li><strong>Sistemas de salud</strong> → Regulados por normativas médicas.</li>
+        <li><strong>Sistemas de alimentación</strong> → Regulados por organismos de control sanitario.</li>
+      </ul>
+      <p>Las pruebas ayudan a garantizar que el software cumple con estos requisitos.</p>
+    </div>
+
+    <div class="divider"><span>* * *</span></div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">11</span>Conceptos de Depuración y Pruebas de Software</h2>
+
+      <h3>1. Depuración (Debugging)</h3>
+      <p>La depuración es el proceso mediante el cual los desarrolladores encuentran, analizan y reparan defectos en el código. Este proceso es esencial para corregir errores que causan fallas en el software. Después de la depuración, se realiza una prueba de confirmación para verificar que la falla haya sido reparada.</p>
+      <p>Aunque normalmente los desarrolladores se encargan de la depuración, en algunas etapas del ciclo de vida del software, los probadores pueden estar involucrados, especialmente al principio del ciclo, durante las pruebas de componentes.</p>
+      <ul>
+        <li>Depurar implica identificar y reparar los defectos en el código.</li>
+        <li>Probar es verificar que el software funcione correctamente después de la reparación.</li>
+      </ul>
+
+      <h3>2. Pruebas de Confirmación y Pruebas Unitarias</h3>
+      <p>Una vez que el desarrollador ha depurado el código, realiza sus pruebas unitarias, que son pruebas realizadas para asegurarse de que su reparación funcione correctamente. Luego, un probador independiente realiza las pruebas de confirmación para verificar que el defecto ha sido reparado correctamente.</p>
+
+      <h3>3. Pruebas de Regresión</h3>
+      <p>Después de que se realiza una reparación, es importante asegurarse de que la corrección no haya afectado otras partes del software. Este proceso se conoce como pruebas de regresión, y también es esencial para mantener la calidad general del software.</p>
+
+      <h3>4. ¿Por qué es necesario probar si el desarrollador ya lo hizo?</h3>
+      <p>Aunque los desarrolladores suelen hacer pruebas de sus propias correcciones, siempre es necesario contar con una revisión adicional para:</p>
+      <ul>
+        <li><strong>Reducir el riesgo de fallas:</strong> Incluso si un desarrollador realiza una corrección, es posible que haya pasado por alto algo, especialmente en sistemas complejos.</li>
+        <li><strong>Aumentar la confianza:</strong> Las pruebas independientes aumentan la confianza de que el software funcionará correctamente.</li>
+        <li><strong>Cumplir con requisitos legales o contractuales:</strong> Algunas pruebas son obligatorias para cumplir con normativas específicas de la industria o requisitos del cliente.</li>
+      </ul>
+
+      <h3>5. El rol de los errores humanos</h3>
+      <p>Los errores son comunes y pueden surgir de suposiciones erradas o puntos ciegos en el código. Los desarrolladores pueden cometer errores, y es difícil para la mayoría identificar sus propios fallos. Las pruebas adicionales son necesarias porque las personas no siempre ven sus propios errores, especialmente en sistemas complejos.</p>
+
+      <h3>6. ¿Cómo las pruebas mejoran la calidad del software?</h3>
+      <p>Las pruebas no solo ayudan a identificar defectos, sino que también:</p>
+      <ul>
+        <li><strong>Previenen defectos:</strong> Detectar y solucionar problemas temprano evita que se conviertan en fallas graves más adelante.</li>
+        <li><strong>Ahorro de tiempo y dinero:</strong> Al identificar defectos a tiempo, se evitan costosos errores en etapas posteriores del desarrollo.</li>
+        <li><strong>Mejor comprensión del diseño:</strong> Los probadores trabajan junto a los desarrolladores y diseñadores para aumentar la comprensión sobre cómo debería funcionar el software y qué pruebas son necesarias.</li>
+      </ul>
+
+      <h3>7. Aseguramiento y Control de la Calidad</h3>
+      <p>El Aseguramiento de la Calidad (QA) y el Control de la Calidad (QC) son conceptos relacionados pero diferentes:</p>
+      <ul>
+        <li><strong>Aseguramiento de la Calidad:</strong> Se enfoca en cumplir con los procesos adecuados para generar productos de trabajo de alta calidad. Es un proceso preventivo que incluye actividades planificadas para lograr mejores resultados desde el inicio.</li>
+        <li><strong>Control de la Calidad:</strong> Se centra en identificar defectos en los productos ya elaborados, es un proceso reactivo. Los probadores realizan pruebas para detectar y corregir defectos antes de que el producto llegue al usuario final.</li>
+      </ul>
+
+      <h3>8. Gestión de la Calidad</h3>
+      <p>La gestión de calidad abarca tanto el aseguramiento como el control de calidad, y se enfoca en las actividades que dirigen y controlan la calidad en toda la organización.</p>
+
+      <h3>9. Objetivos de las Pruebas</h3>
+      <p>Los principales objetivos de las pruebas son:</p>
+      <ul>
+        <li>Evaluar la corrección de los productos de trabajo.</li>
+        <li>Verificar que los requisitos especificados han sido cumplidos.</li>
+        <li>Validar la exactitud de los requisitos.</li>
+        <li>Generar confianza en el software.</li>
+        <li>Prevenir defectos y encontrar fallas.</li>
+        <li>Reducir el riesgo de fallas.</li>
+        <li>Proporcionar información para la toma de decisiones.</li>
+        <li>Cumplir con requisitos legales o comerciales.</li>
+      </ul>
+
+      <h3>10. ¿Cómo contribuyen las pruebas al éxito del software?</h3>
+      <p>Cuando los probadores y desarrolladores trabajan juntos, pueden:</p>
+      <ul>
+        <li>Mejorar la comprensión del diseño y cómo probarlo.</li>
+        <li>Identificar segmentos de código susceptibles a errores antes de que lleguen a producción.</li>
+        <li>Asegurar que el software cumpla con las expectativas del usuario, lo cual genera confianza y fidelidad en el proveedor.</li>
+      </ul>
+    </div>
+
+    <div class="theory-block">
+      <h2><span class="section-number">12</span>Conclusión</h2>
+      <p>Aunque el proceso de depuración busca identificar y corregir defectos en el software, las pruebas aseguran que el sistema funcione como se espera y que no haya efectos colaterales no deseados. Ambas actividades son esenciales para producir software de alta calidad y aumentar la confianza en el producto final.</p>
+    </div>
+
+    <div class="scroll-hint">
+      <span>Continúa hacia abajo para comenzar el cuestionario</span>
+      <span class="arrow">&#8595;</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN DE PREGUNTAS
+  ══════════════════════════════════════════ -->
+  <div id="questions-section">
+
+    <!-- Botón para consultar teoría -->
+    <div class="theory-toggle-bar">
+      <span>Puedes consultar la teoría en cualquier momento mientras respondes.</span>
+      <button id="toggle-theory-btn" onclick="toggleTheory()">Mostrar teoría</button>
+    </div>
+
+    <!-- Teoría plegable dentro de la sección de preguntas -->
+    <div id="inline-theory">
+
+      <div class="theory-block">
+        <h2><span class="section-number">1</span>¿Para qué sirven las pruebas de Software? Fundamentos de Prueba</h2>
+        <p>Las pruebas de software tienen nueve objetivos generales, que ayudan a garantizar la calidad del sistema. A continuación, veremos algunos de ellos en detalle.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">2</span>Evaluar los Productos de Trabajo</h2>
+        <p>Durante el ciclo de vida del desarrollo de software, se generan varios productos de trabajo (Work Products), como:</p>
+        <ul>
+          <li>Grabaciones de reuniones</li>
+          <li>Informes de riesgos</li>
+          <li>Documentos de requerimientos</li>
+          <li>Reportes de progreso</li>
+          <li>Diagramas de diseño</li>
+          <li>Código fuente</li>
+          <li>El sistema terminado</li>
+        </ul>
+        <p>Es importante revisar estos productos desde las etapas más tempranas para detectar errores a tiempo. Esto evita que los problemas avancen a fases donde su corrección sería más difícil y costosa, un principio conocido como <strong>Contención de Fase</strong>.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">3</span>Verificar que se cumplan los requerimientos</h2>
+        <ul>
+          <li><strong>Negocio:</strong> Por ejemplo, el cálculo de intereses en una tarjeta de crédito.</li>
+          <li><strong>Legales:</strong> Como el cumplimiento de regulaciones bancarias.</li>
+        </ul>
+        <p>Un sistema debe cumplir con las reglas establecidas tanto por la empresa como por la ley.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">4</span>Validar que el software funcione como se espera</h2>
+        <div class="highlight-box"><strong>Pregunta clave:</strong> ¿El software realmente resuelve el problema que motivó su desarrollo?</div>
+        <p>Si un sistema pasa las pruebas de verificación y validación, podemos generar confianza en su calidad.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">5</span>Generar confianza en el software</h2>
+        <ul>
+          <li>Un banco donde la tarjeta de débito falla constantemente.</li>
+          <li>Un servicio de TV por cable que se interrumpe cuando hay nubes.</li>
+          <li>Un automóvil que se descompone con frecuencia.</li>
+        </ul>
+        <p>La confianza es clave para el éxito de un producto. Un iPhone puede costar un 40% más que un Huawei, pero la confianza en la marca hace que la gente esté dispuesta a pagar más.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">6</span>Prevenir defectos</h2>
+        <ul>
+          <li>Un defecto es la consecuencia de un error cometido por una persona.</li>
+          <li>Un defecto puede generar otros defectos en el software.</li>
+          <li>Al corregir un defecto temprano, se puede evitar la aparición de nuevos problemas en el sistema.</li>
+        </ul>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">7</span>Diferencia entre Error, Falla y Defecto</h2>
+        <div class="definition-grid">
+          <div class="def-card"><div class="def-title">Error</div><p>Equivocación cometida por un desarrollador en el código.</p></div>
+          <div class="def-card"><div class="def-title">Defecto</div><p>Resultado de un error en el software.</p></div>
+          <div class="def-card"><div class="def-title">Falla</div><p>Cuando un defecto llega a producción y afecta a los usuarios.</p></div>
+        </div>
+        <p><strong>Ejemplo práctico:</strong></p>
+        <ol class="numbered">
+          <li>Un desarrollador olvida validar una división por cero (error).</li>
+          <li>En el código, no hay ninguna verificación para evitar dividir entre cero (defecto).</li>
+          <li>Si un usuario ingresa un valor que genera una división por cero, el sistema falla (falla).</li>
+        </ol>
+        <p>No todos los defectos generan fallas de inmediato, ya que depende de cómo se use el software.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">8</span>Reducir el Riesgo de Fallas</h2>
+        <ul>
+          <li>Si un sistema ha pasado el 80% de las pruebas, se evalúa si el 20% restante es crítico o si se puede omitir.</li>
+        </ul>
+        <p>Es imposible eliminar todos los defectos, pero el objetivo es minimizar el riesgo.</p>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">9</span>Información para la Toma de Decisiones</h2>
+        <ul>
+          <li>Retrasar la liberación del producto.</li>
+          <li>Asumir ciertos riesgos.</li>
+          <li>Invertir más tiempo en correcciones.</li>
+        </ul>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">10</span>Cumplir con Requisitos Legales y Estándares</h2>
+        <ul>
+          <li><strong>Sistemas bancarios</strong> → Regulados por el Banco Central.</li>
+          <li><strong>Sistemas de salud</strong> → Regulados por normativas médicas.</li>
+          <li><strong>Sistemas de alimentación</strong> → Regulados por organismos de control sanitario.</li>
+        </ul>
+      </div>
+
+      <div class="theory-block">
+        <h2><span class="section-number">11</span>Depuración y Calidad</h2>
+        <h3>Depuración (Debugging)</h3>
+        <p>La depuración es el proceso mediante el cual los desarrolladores encuentran, analizan y reparan defectos en el código. Después de la depuración, se realiza una prueba de confirmación para verificar que la falla haya sido reparada.</p>
+        <h3>Pruebas de Confirmación y Regresión</h3>
+        <p>Una vez depurado el código, el desarrollador realiza pruebas unitarias. Luego, un probador independiente realiza las pruebas de confirmación. Las pruebas de regresión verifican que la corrección no haya afectado otras partes del sistema.</p>
+        <h3>QA y QC</h3>
+        <ul>
+          <li><strong>Aseguramiento de la Calidad (QA):</strong> Proceso preventivo. Actividades planificadas desde el inicio.</li>
+          <li><strong>Control de la Calidad (QC):</strong> Proceso reactivo. Identifica defectos en productos ya elaborados.</li>
+        </ul>
+        <h3>Conclusión</h3>
+        <p>Aunque la depuración busca identificar y corregir defectos, las pruebas aseguran que el sistema funcione como se espera y que no haya efectos colaterales no deseados. Ambas actividades son esenciales para producir software de alta calidad.</p>
+      </div>
+
+    </div><!-- /inline-theory -->
+
+    <!-- Cabecera del cuestionario -->
+    <div class="q-header">
+      <h2>Cuestionario de Evaluación</h2>
+      <p>Responde cada pregunta con al menos 80 caracteres para poder avanzar a la siguiente.</p>
+    </div>
+
+    <div class="q-progress" id="q-progress"></div>
+
+    <div class="question-card">
+      <div class="q-number" id="q-big-number">01</div>
+      <div class="q-label">Pregunta <span id="q-index">1</span> de 10</div>
+      <div class="q-text" id="q-text"></div>
+      <textarea class="q-textarea" id="q-textarea" placeholder="Escribe tu respuesta aquí…"></textarea>
+      <div class="char-info">
+        <span id="char-count-label" class="char-count short">0 / 80 caracteres mínimos</span>
+        <span>Mínimo requerido: 80 caracteres</span>
+      </div>
+      <button class="btn-next" id="btn-next" disabled onclick="nextQuestion()">
+        Siguiente pregunta
+      </button>
+    </div>
+
+  </div><!-- /questions-section -->
+
+  <!-- ══════════════════════════════════════════
+       COMPLETADO
+  ══════════════════════════════════════════ -->
+  <div id="completed-section">
+    <h2>Examen Completado</h2>
+    <p>Has respondido las 10 preguntas satisfactoriamente.</p>
+    <button class="btn-download" onclick="downloadPDF()">
+      Descargar respuestas en PDF
+    </button>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ══════════════════════════════════════════════
+// CONSTANTES Y ESTADO
+// ══════════════════════════════════════════════
+const MAX_ALERTS  = 3;
+const MIN_CHARS   = 80;
+const STORAGE_KEY = 'exam_alerts_cap2';
+
+const QUESTIONS = [
+  "¿Cuál es la diferencia entre Error, Defecto y Falla? Da un ejemplo práctico que ilustre cómo un error puede convertirse en una falla.",
+  "¿Qué es la \"Contención de Fase\" y por qué es importante detectar errores en las etapas tempranas del desarrollo de software?",
+  "¿Cuál es la diferencia entre Verificación y Validación en el contexto de las pruebas de software? ¿Por qué ambas son necesarias?",
+  "¿En qué consisten las Pruebas de Regresión y por qué deben realizarse después de corregir un defecto?",
+  "¿Cuál es la diferencia entre Aseguramiento de la Calidad (QA) y Control de la Calidad (QC)? ¿Cuál es preventivo y cuál es reactivo?",
+  "¿Por qué es necesario que un probador independiente realice pruebas de confirmación, si el desarrollador ya verificó su propia corrección?",
+  "¿De qué manera las pruebas de software contribuyen a la toma de decisiones dentro de un proyecto? Da un ejemplo con un sistema bancario.",
+  "Menciona tres tipos de productos de trabajo (Work Products) que se generan durante el ciclo de vida del software y explica por qué deben revisarse desde etapas tempranas.",
+  "¿Es posible eliminar todos los defectos de un software? ¿Cuál es entonces el objetivo real de las pruebas en relación al riesgo?",
+  "¿Cómo beneficia la colaboración entre probadores y desarrolladores a la calidad del software y a la prevención de defectos?"
+];
+
+let state = {
+  alerts:   parseInt(localStorage.getItem(STORAGE_KEY) || '0'),
+  currentQ: 0,
+  answers:  [],
+  phase:    'theory',
+  blocked:  false,
+  paused:   false
+};
+
+// ══════════════════════════════════════════════
+// ARRANQUE
+// ══════════════════════════════════════════════
+function init() {
+  if (state.alerts >= MAX_ALERTS) { block(); return; }
+  renderProgress();
+  updateStatusBar();
+  renderQuestion();
+  observeScroll();
+  setupSecurityListeners();
+  requestFS();
+}
+
+// ══════════════════════════════════════════════
+// PANTALLA COMPLETA
+// ══════════════════════════════════════════════
+function requestFS() {
+  const el = document.documentElement;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (fn) fn.call(el).catch(() => {});
+}
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+            document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+// ══════════════════════════════════════════════
+// SEGURIDAD
+// ══════════════════════════════════════════════
+function setupSecurityListeners() {
+  ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(ev => {
+    document.addEventListener(ev, () => {
+      if (!isFullscreen() && state.phase === 'questions' && !state.paused && !state.blocked)
+        triggerAlert('Has salido de la pantalla completa.');
+    });
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state.phase === 'questions' && !state.paused && !state.blocked)
+      triggerAlert('Has cambiado de pestaña o minimizado la ventana.');
+  });
+  window.addEventListener('blur', () => {
+    if (state.phase === 'questions' && !state.paused && !state.blocked)
+      triggerAlert('La ventana ha perdido el foco.');
+  });
+}
+
+// ══════════════════════════════════════════════
+// MANEJO DE ALERTAS
+// ══════════════════════════════════════════════
+function triggerAlert(msg) {
+  if (state.paused || state.blocked) return;
+  state.alerts++;
+  localStorage.setItem(STORAGE_KEY, state.alerts);
+  state.paused = true;
+  if (state.alerts >= MAX_ALERTS) { block(); return; }
+
+  state.currentQ = 0;
+  state.answers  = [];
+
+  const remaining = MAX_ALERTS - state.alerts;
+  document.getElementById('warn-msg').textContent = msg;
+  document.getElementById('attempts-left-text').textContent =
+    'Te quedan ' + remaining + ' intento(s) antes de que el acceso sea bloqueado.';
+  document.getElementById('warn-overlay').classList.add('active');
+  updateStatusBar();
+}
+
+document.getElementById('resume-btn').addEventListener('click', () => {
+  document.getElementById('warn-overlay').classList.remove('active');
+  state.paused = false;
+  renderProgress();
+  renderQuestion();
+  requestFS();
+});
+
+function block() {
+  state.blocked = true;
+  document.getElementById('warn-overlay').classList.remove('active');
+  document.getElementById('blocked-overlay').classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+// TRANSICIÓN TEORÍA → PREGUNTAS
+// ══════════════════════════════════════════════
+function observeScroll() {
+  const hint = document.querySelector('.scroll-hint');
+  if (!hint) return;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && state.phase === 'theory') {
+        setTimeout(() => {
+          state.phase = 'questions';
+          document.getElementById('theory-section').style.display = 'none';
+          document.getElementById('questions-section').style.display = 'block';
+          updateStatusBar();
+          requestFS();
+        }, 500);
+      }
+    });
+  }, { threshold: 0.9 });
+  obs.observe(hint);
+}
+
+// ══════════════════════════════════════════════
+// TOGGLE TEORÍA EN PREGUNTAS
+// ══════════════════════════════════════════════
+function toggleTheory() {
+  const el  = document.getElementById('inline-theory');
+  const btn = document.getElementById('toggle-theory-btn');
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Ocultar teoría' : 'Mostrar teoría';
+}
+
+// ══════════════════════════════════════════════
+// PREGUNTAS
+// ══════════════════════════════════════════════
+function renderProgress() {
+  const c = document.getElementById('q-progress');
+  c.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'q-dot' +
+      (i < state.currentQ ? ' done' : '') +
+      (i === state.currentQ ? ' current' : '');
+    c.appendChild(d);
+  });
+}
+
+function renderQuestion() {
+  document.getElementById('q-big-number').textContent = String(state.currentQ + 1).padStart(2, '0');
+  document.getElementById('q-index').textContent = state.currentQ + 1;
+  document.getElementById('q-text').textContent = QUESTIONS[state.currentQ];
+  const ta = document.getElementById('q-textarea');
+  ta.value = '';
+  ta.focus();
+  updateCharCount(0);
+}
+
+document.getElementById('q-textarea').addEventListener('input', function() {
+  updateCharCount(this.value.length);
+});
+
+function updateCharCount(n) {
+  const lbl = document.getElementById('char-count-label');
+  const btn = document.getElementById('btn-next');
+  lbl.textContent = n + ' / ' + MIN_CHARS + ' caracteres mínimos';
+  if (n >= MIN_CHARS) { lbl.className = 'char-count ok';    btn.disabled = false; }
+  else                { lbl.className = 'char-count short'; btn.disabled = true;  }
+}
+
+function nextQuestion() {
+  const answer = document.getElementById('q-textarea').value.trim();
+  if (answer.length < MIN_CHARS) return;
+
+  state.answers.push({ q: state.currentQ + 1, question: QUESTIONS[state.currentQ], answer });
+  state.currentQ++;
+
+  if (state.currentQ >= QUESTIONS.length) { finishExam(); return; }
+
+  renderProgress();
+  renderQuestion();
+  window.scrollTo({ top: document.getElementById('questions-section').offsetTop - 60, behavior: 'smooth' });
+}
+
+function finishExam() {
+  state.phase = 'done';
+  document.getElementById('questions-section').style.display = 'none';
+  document.getElementById('completed-section').style.display = 'block';
+  updateStatusBar();
+}
+
+// ══════════════════════════════════════════════
+// BARRA DE ESTADO
+// ══════════════════════════════════════════════
+function updateStatusBar() {
+  document.getElementById('alert-count').textContent = state.alerts;
+  const labels = { theory: 'Leyendo teoría', questions: 'Respondiendo preguntas', done: 'Completado' };
+  document.getElementById('phase-text').textContent = labels[state.phase] || '';
+}
+
+// ══════════════════════════════════════════════
+// PDF
+// ══════════════════════════════════════════════
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc    = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW  = doc.internal.pageSize.getWidth();
+  const pageH  = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const maxW   = pageW - margin * 2;
+  let y = margin;
+
+  function checkPage(needed) {
+    if (y + (needed || 10) > pageH - margin) { doc.addPage(); y = margin; }
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(139, 58, 15);
+  doc.text('Capítulo 2 – Pruebas y Depuración', margin, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(100, 90, 80);
+  doc.text('Respuestas del Cuestionario de Evaluación', margin, y);
+  y += 5;
+
+  doc.setDrawColor(196, 180, 154);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  doc.setFontSize(9);
+  doc.setTextColor(130, 120, 100);
+  doc.text('Fecha: ' + new Date().toLocaleDateString('es-AR', { dateStyle: 'long' }), margin, y);
+  y += 14;
+
+  state.answers.forEach(function(item) {
+    checkPage(30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(139, 58, 15);
+    var qLines = doc.splitTextToSize('Pregunta ' + item.q + ': ' + item.question, maxW);
+    checkPage(qLines.length * 6 + 20);
+    doc.text(qLines, margin, y);
+    y += qLines.length * 6 + 4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(26, 18, 7);
+    var aLines = doc.splitTextToSize(item.answer, maxW - 6);
+    checkPage(aLines.length * 5.5 + 12);
+    doc.setFillColor(245, 240, 232);
+    doc.roundedRect(margin, y - 2, maxW, aLines.length * 5.5 + 8, 2, 2, 'F');
+    doc.text(aLines, margin + 4, y + 4);
+    y += aLines.length * 5.5 + 16;
+
+    doc.setDrawColor(210, 200, 185);
+    checkPage(2);
+    doc.line(margin, y - 6, pageW - margin, y - 6);
+  });
+
+  doc.save('respuestas_pruebas_software.pdf');
+}
+
+// ══════════════════════════════════════════════
+init();
+</script>
 </body>
-
 </html>
